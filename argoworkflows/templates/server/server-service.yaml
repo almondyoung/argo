@@ -13,6 +13,10 @@ metadata:
   {{- end }}
 spec:
   ports:
+  - name: nginx-port
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
   - port: {{ .Values.server.servicePort }}
     {{- with .Values.server.servicePortName }}
     name: {{ . }}

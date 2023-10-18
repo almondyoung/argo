@@ -104,6 +104,15 @@ spec:
           {{- with .Values.server.volumeMounts }}
             {{- toYaml . | nindent 10}}
           {{- end }}
+        - name: nginx-proxy
+          image: nginx:stable-alpine3.17-slim
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: nginx-config
+              readOnly: true
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
         {{- with .Values.server.extraContainers }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -114,6 +123,12 @@ spec:
       volumes:
       - name: tmp
         emptyDir: {}
+      - name: nginx-config
+        configMap:
+          name: workflow-nginx-configs
+          items:
+            - key: nginx.conf
+              path: nginx.conf
       {{- with .Values.server.volumes }}
         {{- toYaml . | nindent 6}}
       {{- end }}
@@ -143,24 +158,37 @@ spec:
       {{- with .Values.server.priorityClassName }}
       priorityClassName: {{ . }}
       {{- end }}
-{{/*---*/}}
-
-{{/*apiVersion: sys.bytetrade.io/v1alpha1*/}}
-{{/*kind: ProviderRegistry*/}}
-{{/*metadata:*/}}
-{{/*  name: {{ .Release.Name }}-svc-api*/}}
-{{/*  namespace: user-system-{{ .Values.bfl.username }}*/}}
-{{/*spec:*/}}
-{{/*  dataType: legacy_api*/}}
-{{/*  deployment: argoworkflows-svc*/}}
-{{/*  description: argoworkflows api*/}}
-{{/*  endpoint: {{ .Release.Name }}-svc.{{ .Release.Namespace }}:2746*/}}
-{{/*  group: api.argoworkflowsapi*/}}
-{{/*  kind: provider*/}}
-{{/*  namespace: {{ .Release.Namespace }}*/}}
-{{/*  version: v1*/}}
-{{/*status:*/}}
-{{/*  state: active*/}}
-
-{{/*---*/}}
 {{- end -}}
+
+---
+apiVersion: v1
+data:
+  nginx.conf: |
+    # Configuration checksum:
+
+    pid /var/run/nginx.pid;
+
+    worker_processes auto;
+
+    events {
+      worker_connections 1024;
+    }
+
+    http {
+      server {
+        listen 8080;
+
+        location / {
+          proxy_pass http://argo-server:2746;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+          add_header X-Frame-Options SAMEORIGIN;
+        }
+      }
+    }
+kind: ConfigMap
+metadata:
+  name: workflow-nginx-configs
+  namespace: {{ .Release.Namespace }}
