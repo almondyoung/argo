@@ -434,7 +434,7 @@ server:
   # -- Service node port
   serviceNodePort: # 32746
   # -- Service port name
-  servicePortName: "" # http
+  servicePortName: "http" # http
 
   serviceAccount:
     # -- Create a service account for the server

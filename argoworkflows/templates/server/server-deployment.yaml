@@ -60,6 +60,7 @@ spec:
           - "--auth-mode={{ .Values.server.authMode }}"
           {{- end }}
           - "--secure={{ .Values.server.secure }}"
+          - "--x-frame-options="
           {{- if .Values.singleNamespace }}
           - "--namespaced"
           {{- end }}
@@ -158,7 +159,6 @@ spec:
       {{- with .Values.server.priorityClassName }}
       priorityClassName: {{ . }}
       {{- end }}
-{{- end -}}
 
 ---
 apiVersion: v1
@@ -179,12 +179,10 @@ data:
         listen 8080;
 
         location / {
-          proxy_pass http://argo-server:2746;
+          proxy_pass http://127.0.0.1:2746;
           proxy_set_header Host $host;
           proxy_set_header X-Real-IP $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-          add_header X-Frame-Options SAMEORIGIN;
         }
       }
     }
@@ -192,3 +190,7 @@ kind: ConfigMap
 metadata:
   name: workflow-nginx-configs
   namespace: {{ .Release.Namespace }}
+
+{{- end -}}
+
+
